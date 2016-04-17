@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+<link rel="stylesheet" href="static/lib/codemirror.css">
+<link rel="stylesheet" href="static/theme/monokai.css">
+<title> Metric Adder </title>
+</head>
+<body>
+<div class="container">
+	<div class="row">
+		<h1>Metric Adder System</h1>
+	</div>
+	{% if metrics %}
+	<div class="panel panel-default">
+	  <!-- Default panel contents -->
+			<div class="panel-heading"><h3>Current Metrics</h3></div>
+		   <!-- Table -->
+			<table class="table">
+			      <tr>
+						<th>Metric Name</th>
+						<th>Time Interval</th>
+						<th>Is Metric</th>
+						<th></th>
+						<th></th>
+					</tr>
+					{% for metric in metrics %}
+						<tr>
+							<td>{{metric['name']}}</td>
+							<td>{{metric['interval']}}</td>
+							<td>{{metric['is_metric']}}</td>
+							<td><button class="btn btn-warning" onclick="resetMetric('{{metric['name']}}');">Reset Data</button></td>
+							<td><button class="btn btn-danger" onclick="deleteMetric('{{metric['name']}}');">Delete</button></td>
+						</tr>
+					{% endfor %}
+			</table>
+	</div>
+	{% endif %}
+</div>
+<div class="container">
+	<div class="row">
+		<div class="col-md-12">
+			<form>
+				<div class="form-group">
+					<label for="name">Name</label>
+					<input type="text" class="form-control" id="name" placeholder="Enter metric name">
+				</div>
+				<div class="form-group">
+					<label for="interval">Interval(in seconds)</label>
+					<input type="text" class="form-control" id="interval" placeholder="86400">
+				</div>
+				<div class="form-group">
+					<label for="interval">Is Metric</label>
+					<input type="text" class="form-control" id="is_metric" placeholder="1">
+				</div>
+				</div>
+				<div class="form-group">
+					<label for="query"> Query(Mongo json) </label>
+					<textarea class="form-control" id="query">{"type": "", "time":{"$lte": $TimeExpression(0m), "$gte": $TimeExpression(-1d)}}</textarea>
+				</div>
+				<div class="form-group">
+					<label for="map"> Map Statement </label>
+					<textarea class="form-control" id="map">function(){$EmitExpression("result":1)}</textarea>
+				</div>
+				<div class="form-group">
+					<label for="reduce"> Reduce Statement </label>
+					<textarea class="form-control" id="reduce">function(key, value){return $ReturnExpression(1);}</textarea>
+				</div>
+				<button type="button" class="btn btn-lg btn-info" id="test-button" style="margin-bottom:20px;">Test</button>
+				<button type="button" class="btn btn-lg btn-primary" id="add-button" style="margin-bottom:20px;">Add</button>
+			</form>
+		</div>
+	</div>
+</div>
+
+<div id="result-modal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+				<h4 class="modal-title" id="myModalLabel">Result for Current Time</h4>
+			</div>
+			<div class="modal-body">
+				<div id="result-container">
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Latest compiled and minified JavaScript -->
+<script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+<script src="static/lib/codemirror.js"></script>
+<script src="static/mode/javascript/javascript.js"></script>
+
+<script>
+	function deleteMetric(metric) {
+			$.ajax({
+				url: "delete_metric",
+				type: "POST",
+				data: JSON.stringify({"name":metric}),
+				dataType: "json",
+				contentType: "application/json",
+				success: function(data) {
+					location.reload();
+				}
+			});
+	}
+
+	function resetMetric(metric) {
+			$.ajax({
+				url: "reset_metric",
+				type: "POST",
+				data: JSON.stringify({"name":metric}),
+				dataType: "json",
+				contentType: "application/json",
+				success: function(data) {
+					location.reload();
+				}
+			});
+
+	}
+
+	$(document).ready(function(){
+		var query_area = document.getElementById("query");
+		var queryCodeMirror = CodeMirror(function(elt) {
+			query_area.parentNode.replaceChild(elt, query_area);
+			}, {value: query_area.value, theme:"monokai", mode:"javascript"});
+
+		var map_area = document.getElementById("map");
+		var mapCodeMirror = CodeMirror(function(elt) {
+			map_area.parentNode.replaceChild(elt, map_area);
+			}, {value: map_area.value, theme:"monokai", mode:"javascript"});
+
+		var reduce_area = document.getElementById("reduce");
+		var reduceCodeMirror = CodeMirror(function(elt) {
+			reduce_area.parentNode.replaceChild(elt, reduce_area);
+			}, {value: reduce_area.value, theme:"monokai", mode:"javascript"});
+
+		function createJSON(){
+			var metric = {
+				name: $("#name").val(),
+				interval: parseInt($("#interval").val()),
+				is_metric: parseInt($("#is_metric").val()),
+				query: queryCodeMirror.getValue(),
+				statement: {
+					map: mapCodeMirror.getValue(),
+					reduce: reduceCodeMirror.getValue()
+				}
+			}
+			return metric;
+		}
+
+		$("#test-button").click(function() {
+			$.ajax({
+				url: "test_metric",
+				type: "POST",
+				data: JSON.stringify(createJSON()),
+				dataType: "json",
+				contentType: "application/json",
+				success: function(data){
+					console.log("buralara kadar geldim." + JSON.stringify(data, null, 4));
+					$('#result-container').empty();
+					$('#result-container').html(JSON.stringify(data, null, 4));
+					$('#result-modal').modal('toggle');
+				},
+				error: function(xhr, ajaxOptions, thrownError) {
+					console.log("XHR: " + JSON.stringify(xhr, null, 4));
+					console.log("ajaxOptions: " + ajaxOptions);
+					console.log("thrownError: " + thrownError);
+				}
+			});
+		});
+		$("#add-button").click(function() {
+			$.ajax({
+				url: "add_metric",
+				type: "POST",
+				data: JSON.stringify(createJSON()),
+				dataType: "json",
+				contentType: "application/json",
+				success: function(data) {
+					$('#result-container').empty();
+					$('#result-container').html(JSON.stringify(data, null, 4));
+					$('#result-modal').modal('toggle');
+				}
+			});
+		});
+	});
+</script>
+</body>
+</html>
