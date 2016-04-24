@@ -3,14 +3,12 @@ import flask
 import json
 import requests
 import functools
-import pymongo
 import MySQLdb
 from subprocess import call
-from redis import Redis
 
 app = Flask(__name__)
 app.secret_key = "eskihafiz"
-db = MySQLdb.connect('localhost', 'root', 'omer', 'DENEME')
+db = MySQLdb.connect('localhost', 'root', 'kaan', 'airline_company')
 
 def login_required(method):
     '''
