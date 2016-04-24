@@ -1,20 +1,20 @@
-import MySQLdb
-from MySQLdb import errorcode
+import mysql.connector 
+from mysql.connector import errorcode
 
-conn = MySQLdb.connect(user="root", passwd="omer")
+conn = mysql.connector.connect(user="root", passwd="kaan")
 cursor = conn.cursor()
 
 DB_NAME = 'airline_company'
 
 try:
     cursor.execute("CREATE DATABASE if not exists airline_company")
-except MySQLdb.Error as err:
+except mysql.connector.Error as err:
     print('Failed creating database: {}'.format(err))
     exit(1)
 
 try:
     conn.database = DB_NAME
-except MySQLdb.Error as err:
+except mysql.connector.Error as err:
     if (err.errno == errorcode.ER_BAD_DB_ERROR):
         create_database(cursor)
         conn.database = DB_NAME
@@ -329,7 +329,7 @@ cnt = 0
 for sql in tables:
     try:
         cursor.execute(sql)
-    except MySQLdb.Error as err:
+    except mysql.connector.Error as err:
         if err.errno == errorcode.ER_TABLE_EXISTS_ERROR:
             print("already exists.")
         else:
