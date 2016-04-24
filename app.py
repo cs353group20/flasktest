@@ -5,7 +5,6 @@ import requests
 import functools
 import MySQLdb
 from subprocess import call
-from signup import signup
 
 app = Flask(__name__)
 app.secret_key = 'eskihafiz'
