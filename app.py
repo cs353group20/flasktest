@@ -3,20 +3,30 @@ import flask
 import json
 import requests
 import functools
+import pymongo
 import MySQLdb
 from subprocess import call
+from redis import Redis
+from signup import signup
 
 app = Flask(__name__)
-app.secret_key = "eskihafiz"
-db = MySQLdb.connect('localhost', 'root', 'kaan', 'airline_company')
+app.secret_key = 'eskihafiz'
+db = MySQLdb.connect(user="root", passwd="kaan", db="airline_company")
 
 def login_required(method):
-    '''
-    This is a decorator to protect the pages and the operations that need user to be logged in to see/do.
-    '''
     @functools.wraps(method)
     def wrapper(*args, **kwargs):
+        #session.pop('isloggedin', None)
         if 'isloggedin' in session:
+            return method(*args, **kwargs)
+        else:
+            return flask.redirect('/login')
+    return wrapper
+
+def signup_required(method):
+    @functools.wraps(method)
+    def wrapper(*args, **kwargs):
+        if 'signup' in session:
             return method(*args, **kwargs)
         else:
             return flask.redirect('/login')
@@ -24,81 +34,70 @@ def login_required(method):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    #session.pop('isloggedin', None)
     if 'isloggedin' in session:
-        print("AHANDA")
         return flask.redirect('/')
-    else:
-        print("DENME")
-    if request.method == 'POST':
-        if 'id' in request.form and 'password' in request.form:
-            username = request.form['id']
-            password = request.form['password']
-            cursor = db.cursor()
-            cursor.execute("SELECT * from user WHERE username='{}' and pass='{}'".format(username, password))
-            data = cursor.fetchone()
-            if data == None:
-                return flask.redirect('/login')
-            session['id'] = request.form['id']
-            session['isloggedin'] = True
-            return flask.redirect('/')
-        return flask.redirect('/login')
-    else:
-        return render_template('login.html')
+    elif 'signup' in session:
+        return flask.redirect('/signup')
 
+    if request.method == 'POST':
+        if request.form['submit'] == 'Signup':
+            session['signup'] = True
+            return flask.redirect('/signup')
+        if request.form['submit'] == 'Login':
+            if 'id' in request.form and 'password' in request.form:
+                userid = request.form['id']
+                password = request.form['password']
+                cursor = db.cursor()
+                cursor.execute("SELECT * FROM person WHERE person_id='{}' and password='{}'".format(userid, password))
+                data = cursor.fetchone()
+
+                if data == None:
+                    return flask.redirect('/login')
+                session['id'] = request.form['id']
+                session['isloggedin'] = True
+
+                if userid == 0:
+                    session['admin'] = True
+
+                cursor.execute("SELECT * FROM passenger WHERE pass_id='{}'".format(userid))
+                data = cursor.fetchone()
+                if data != None:
+                    session['passenger'] = True
+
+                cursor.execute("SELECT * FROM pilot WHERE pilot_id='{}'".format(userid))
+                data = cursor.fetchone()
+                if data != None:
+                    session['pilot'] = True
+
+                cursor.execute("SELECT * FROM flight_attendant WHERE att_id='{}'".format(userid))
+                data = cursor.fetchone()
+                if data != None:
+                    session['attendant'] = True
+
+                cursor.execute("SELECT * FROM store_staff WHERE store_staff_id='{}'".format(userid))
+                data = cursor.fetchone()
+                if data != None:
+                    session['store_staff'] = True
+
+                cursor.execute("SELECT * FROM ticket_staff WHERE ticket_staff_id='{}'".format(userid))
+                data = cursor.fetchone()
+                if data != None:
+                    session['ticket_staff'] = True
+                return flask.redirect('/')
+            return flask.redirect('/login')
+    return render_template('login.html')
 
 @app.route('/')
 @login_required
-def dashboard_html():
-    if 'id' in session:
-        return "HOSGELDIN {}".format(session['id'])
-    else:
-        return "NOPE"
+def init_screen():
+    pass
 
-"""
-@app.route('/test_metric', methods=['POST'])
-@login_required
-def test_metric():
-    r = requests.get("http://analytics.scorebeyond.com:8000/v1/new_metric", data = request.data)
-    res = Response(response = json.dumps({"response":json.loads(r.text), "status":r.status_code}), status = 200, mimetype = "application/json")
-    return res
+@app.route('/signup', methods=['GET', 'POST'])
+@signup_required
+def signup():
+    session.pop('signup', None)
+    return render_template('signup.html')
 
-@app.route('/add_metric', methods=['POST'])
-@login_required
-def add_metric():
-    r = requests.post("http://analytics.scorebeyond.com:8000/v1/new_metric", data = request.data)
-    res = Response(response = json.dumps({"response":json.loads(r.text), "status":r.status_code}), status = 200, mimetype = "application/json")
-    return res
-
-def erase_metric_data(metric):
-	db = pymongo.mongo_client.MongoClient(host='localhost')['analytics']
-	db.calculable_result.remove({"name":metric})
-	folder_path = "/opt/graphite/storage/whisper/" + metric
-	call(["rm", "-rf", folder_path]) # delete graphite data!!!
-	r = Redis()
-	r.hdel("calculable_times", *[metric]) # delete last_calculable_time from redis.
-
-def erase_metric_from_db(metric):
-	db = pymongo.mongo_client.MongoClient(host='localhost')['analytics']
-	db.calculable_definition.remove({"name":metric})
-
-@app.route('/reset_metric', methods=['POST'])
-@login_required
-def reset_metric():
-	data = json.loads(request.data)
-	if 'name' in data:
-		erase_metric_data(data['name'])
-	res = Response(response = json.dumps({}), status = 200, mimetype = "application/json")
- 	return res
-
-@app.route('/delete_metric', methods=['POST'])
-@login_required
-def delete_metric():
-	data = json.loads(request.data)
-	if 'name' in data:
-		erase_metric_data(data['name'])
-		erase_metric_from_db(data['name'])
-	res = Response(response = json.dumps({}), status = 200, mimetype = "application/json")
- 	return res
-"""
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=3001, debug=True)
+    app.run(host="127.0.0.1", port=3360, debug=True)
