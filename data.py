@@ -54,7 +54,6 @@ if __name__ == "__main__":
     try:
         db.database = "airline_company"
     except mysql.connector.Error as err:
-        return None
+        exit(1)
     db = database(db)
-
     ###### TEST CODE GOES HERE
