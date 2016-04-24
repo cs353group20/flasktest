@@ -3,10 +3,8 @@ import flask
 import json
 import requests
 import functools
-import pymongo
 import MySQLdb
 from subprocess import call
-from redis import Redis
 from signup import signup
 
 app = Flask(__name__)
