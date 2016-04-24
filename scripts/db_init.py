@@ -341,6 +341,10 @@ for sql in tables:
         print "Table successfully created"
     cnt = cnt + 1
 
+#insert dummy data
+data = []
+
+
 conn.commit()
 cursor.close();
 conn.close();

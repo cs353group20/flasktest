@@ -121,7 +121,7 @@ def pass_flight():
     " WHERE EXISTS(SELECT city_name, country FROM airport AS A WHERE F.dep_airport_name = A.airport_name AND city_name LIKE CONCAT('%', '{}', '%'))"
     " AND EXISTS(SELECT city_name, country FROM airport AS A WHERE F.arr_airport_name = A.airport_name AND city_name LIKE CONCAT('%', '{}', '%'))" 
     " ORDER BY F.flight_id".format(source_filter, dest_filter))
-
+    
     pass_id = 7
     flight_id = 1
     ts = '2016-01-12 15:27:43'
